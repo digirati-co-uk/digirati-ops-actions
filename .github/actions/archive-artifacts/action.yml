@@ -16,7 +16,6 @@ runs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
-        merge-multiple: true
 
     - run: |
         aws s3 cp --recursive artifacts/* s3://digirati-ci-artifacts/digirati-co-uk/$REPOSITORY/$BRANCH/
