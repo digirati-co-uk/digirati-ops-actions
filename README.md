@@ -34,7 +34,7 @@ jobs:
       # Archive artifacts to S3/CloudFront
       - name: Archive artifacts
         id: archive
-        uses: digirati-ops-actions/.github/actions/archive-artifacts@main
+        uses: digirati-co-uk/digirati-ops-actions/.github/actions/archive-artifacts@main
       
       # Use the CloudFront URL
       - name: Output artifact URL
