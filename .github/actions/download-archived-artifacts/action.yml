@@ -1,10 +1,9 @@
 name: Archive artifacts
 description: Uploads artifacts produced during a workflow run to S3
-outputs:
-  url:
-    description: "Base URL of assets available on CloudFront"
-    value: ${{ steps.upload.outputs.url }}
-
+inputs:
+  branch:
+    description: "The name of the branch to pull artifacts for"
+    default: ${{ github.head_ref || github.ref_name }}
 runs:
   using: "composite"
   steps:
@@ -17,16 +16,9 @@ runs:
         aws-region: "eu-west-1"
         set-in-environment: true
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-
     - run: |
-        aws s3 cp --recursive artifacts/* s3://digirati-ci-artifacts/digirati-co-uk/$REPOSITORY/$BRANCH/
-        echo "url=https://d1o8q7gs2alph4.cloudfront.net/digirati-co-uk/$REPOSITORY/$BRANCH/index.html" >> $GITHUB_OUTPUT
-      id: upload
+        aws s3 cp --recursive s3://digirati-ci-artifacts/digirati-co-uk/$REPOSITORY/$BRANCH/ artifacts/*
       env:
         REPOSITORY: ${{ github.event.repository.name }}
-        BRANCH: ${{ github.head_ref || github.ref_name }} 
+        BRANCH: ${{ inputs.branch }}
       shell: bash
