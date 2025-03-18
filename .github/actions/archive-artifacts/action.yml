@@ -31,7 +31,7 @@ runs:
         echo "url=https://d1o8q7gs2alph4.cloudfront.net/$ORG/$REPOSITORY/$PREFIX/index.html" >> $GITHUB_OUTPUT
       id: upload
       env:
-        ORG: ${{ github.event.organization.name }}
+        ORG: ${{ github.repository_owner }}
         REPOSITORY: ${{ github.event.repository.name }}
         PREFIX: ${{ inputs.prefix }}
       shell: bash
