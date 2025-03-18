@@ -27,10 +27,11 @@ runs:
         path: artifacts
 
     - run: |
-        aws s3 cp --recursive artifacts/* s3://digirati-ci-artifacts/digirati-co-uk/$REPOSITORY/$PREFIX/
-        echo "url=https://d1o8q7gs2alph4.cloudfront.net/digirati-co-uk/$REPOSITORY/$PREFIX/index.html" >> $GITHUB_OUTPUT
+        aws s3 cp --recursive artifacts/* s3://digirati-ci-artifacts/$ORG/$REPOSITORY/$PREFIX/
+        echo "url=https://d1o8q7gs2alph4.cloudfront.net/$ORG/$REPOSITORY/$PREFIX/index.html" >> $GITHUB_OUTPUT
       id: upload
       env:
+        ORG: ${{ github.event.organization.name }}
         REPOSITORY: ${{ github.event.repository.name }}
         PREFIX: ${{ inputs.prefix }}
       shell: bash
