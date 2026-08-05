@@ -1,0 +1,77 @@
+name: Query for image by app_version and tag
+description: "TODO"
+
+inputs:
+  step_name:
+    description: 'The name of the step executing this action, used for the summary'
+    required: false
+    default: 'Image Query'
+  repository_name:
+    description: 'ECR repository name'
+    required: true
+  app_version:
+    description: 'App version tag to be included in image as APP_VERSION env variable.'
+    required: true
+  environment_tag:
+    description: 'Environment tag to use for the built image, e.g. "dev", "prod"'
+    required: false
+    default: ""
+outputs:
+  exists:
+    description: Whether an image tagged with app_version already exists.
+    value: ${{ steps.query-images.outputs.exists }}
+  tagged:
+    description: Whether the image found has been tagged with environment_tag.
+    value: ${{ steps.query-images.outputs.tagged }}
+runs:
+  using: "composite"
+  steps:
+    - name: Querying ${{ inputs.repository_name }} for ${{ inputs.app_version }}
+      id: query-images
+      shell: bash
+      run: |
+        echo "::notice::Querying ${{ inputs.repository_name }} for ${{ inputs.app_version }}"
+        IMAGE_METADATA=$(aws ecr describe-images \
+          --repository-name "${{ inputs.repository_name }}" \
+          --image-ids imageTag="${{ inputs.app_version }}" \
+          --output json 2>/dev/null || echo "NOT_FOUND")
+
+        echo "IMAGE_METADATA = $IMAGE_METADATA"
+        echo "## ${{ inputs.step_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "| Repository | Version | Found | Tagged | Notes |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        if [ "$IMAGE_METADATA" != "NOT_FOUND" ] && echo "$IMAGE_METADATA" | jq -e '.imageDetails[0].imageDigest' >/dev/null 2>&1; then
+          echo "::notice::Image found in ECR with tag ${{inputs.app_version}}."
+          echo "exists=true" >> $GITHUB_OUTPUT
+          if [ -n "${{ inputs.environment_tag }}" ]; then
+            echo "Checking if image ${{inputs.app_version}} already tagged with ${{ inputs.environment_tag }}."
+            ALL_TAGS=$(echo "$IMAGE_METADATA" | jq -r '.imageDetails[0].imageTags[]?') 
+            if echo "$ALL_TAGS" | grep -qw "${{inputs.environment_tag}}"; then
+              echo "::notice::This image already has the ${{inputs.environment_tag}} tag applied. Skipping retag."
+              echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | ${{ inputs.environment_tag }} | Already tagged |" >> $GITHUB_STEP_SUMMARY
+              echo "tagged=true" >> $GITHUB_OUTPUT
+            else 
+              IMAGE_MANIFEST=$(aws ecr batch-get-image \
+              --repository-name "${{ inputs.repository_name }}" \
+              --image-ids imageTag="${{ inputs.app_version }}" \
+              --query 'images[0].imageManifest' \
+              --output text)
+              echo "Tagging image ${{inputs.app_version}} with ${{ inputs.environment_tag }}."
+              aws ecr put-image \
+                --repository-name "${{ inputs.repository_name }}" \
+                --image-tag "${{ inputs.environment_tag }}" \
+                --image-manifest "$IMAGE_MANIFEST" > /dev/null
+              echo "tagged=true" >> $GITHUB_OUTPUT
+              echo "::notice::Successfully applied environment tag: '${{ inputs.environment_tag }}'"
+              echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | ${{ inputs.environment_tag }} | |" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "No environment_tag provided"
+            echo "tagged=false" >> $GITHUB_OUTPUT
+            echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | N/A | No environment_tag provided |" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "::notice::Image not found in ECR: ${{inputs.app_version}}."
+          echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | False | | |" >> $GITHUB_STEP_SUMMARY
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
