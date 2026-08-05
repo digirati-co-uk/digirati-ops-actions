@@ -1,0 +1,27 @@
+name: Get Commit Version
+description: "Gets the version of the image from the current commit. If the commit is tagged, it will use the tag name as the version. Otherwise, it will use the first 7 characters of the commit SHA prefixed with 'sha-'."
+outputs:
+  commit_version:
+    description: The image version from the current commit.
+    value: ${{ steps.get-commit-version.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get Commit Version
+      shell: bash
+      id: get-commit-version
+      run: |
+        if [ "${{ github.ref_type }}" = "tag" ]; then
+          APP_VERSION=${{ github.ref_name }}
+        else
+          CUT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+          APP_VERSION=sha-$CUT_SHA
+        fi
+        echo "::notice::Got version $APP_VERSION from commit."
+        echo "version=${APP_VERSION}" >> $GITHUB_OUTPUT
+    - name: Commit Version Summary
+      shell: bash
+      id: commit-version-summary
+      run: |
+            echo "| **Commit Version** | git | \`${{steps.get-commit-version.outputs.version}}\` |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,35 @@
+name: Get Deployed Version
+description: "Gets the version of the image from the currently deployed environment. If a deployment url is provided, it will retrieve the version from that url. Otherwise, it will skip this step."
+inputs:
+  deployment_url:
+    description: "Deployment url to retrieve current_version"
+    required: false
+    default: ""
+outputs:
+  deployed_version:
+    description: The currently deployed version
+    value: ${{ steps.get-deployed-version.outputs.version || 'Not Detected' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get currently deployed version.
+      shell: bash
+      if: ${{inputs.deployment_url != ''}}
+      id: get-deployed-version
+      run: |
+        DEPLOYED_VERSION=$(curl -s "${{inputs.deployment_url}}/version" | jq -r ".version")
+        echo "::notice::Got version $DEPLOYED_VERSION from ${{inputs.deployment_url}}/version"
+        echo "version=${DEPLOYED_VERSION}" >> $GITHUB_OUTPUT
+    - name: Deployed Version Summary
+      shell: bash
+      id: version-summary
+      run: |
+        if [ -n "${{ steps.get-deployed-version.outputs.version }}" ]; then
+          DEPLOYED_VAL="\`${{ steps.get-deployed-version.outputs.version }}\`"
+          DEPLOYED_SOURCE_VAL="${{ inputs.deployment_url }}/version"
+        else
+          DEPLOYED_VAL="*Skipped*"
+          DEPLOYED_SOURCE_VAL="*N/A*"
+        fi
+        echo "| **Deployed Version** | $DEPLOYED_SOURCE_VAL | $DEPLOYED_VAL |" >> $GITHUB_STEP_SUMMARY
