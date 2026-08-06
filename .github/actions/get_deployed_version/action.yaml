@@ -32,4 +32,8 @@ runs:
           DEPLOYED_VAL="*Skipped*"
           DEPLOYED_SOURCE_VAL="*N/A*"
         fi
+        echo "## Deployed Version" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Version Type | Source | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
         echo "| **Deployed Version** | $DEPLOYED_SOURCE_VAL | $DEPLOYED_VAL |" >> $GITHUB_STEP_SUMMARY

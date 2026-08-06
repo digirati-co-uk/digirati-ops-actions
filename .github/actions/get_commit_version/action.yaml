@@ -24,4 +24,8 @@ runs:
       shell: bash
       id: commit-version-summary
       run: |
-            echo "| **Commit Version** | git | \`${{steps.get-commit-version.outputs.version}}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "## Commit Version" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Version Type | Source | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Commit Version** | git | \`${{steps.get-commit-version.outputs.version}}\` |" >> $GITHUB_STEP_SUMMARY
