@@ -25,7 +25,8 @@ runs:
           --repository-name "${{ inputs.repository_name }}" \
           --image-ids imageTag="${{ inputs.app_version }}" \
           --output json 2>/dev/null || echo "NOT_FOUND")
-
+          
+        echo "## ${{ inputs.step_name }}" >> $GITHUB_STEP_SUMMARY
         echo "| Repository | Version | Found | Tag |" >> $GITHUB_STEP_SUMMARY
         echo "| :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
 
