@@ -26,6 +26,9 @@ runs:
           --image-ids imageTag="${{ inputs.app_version }}" \
           --output json 2>/dev/null || echo "NOT_FOUND")
 
+        echo "| Repository | Version | Found | Tag |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+
         echo "IMAGE_METADATA = $IMAGE_METADATA"
         if [ -n "${{ inputs.environment_tag }}" ]; then
             echo "Checking if image ${{inputs.app_version}} already tagged with ${{ inputs.environment_tag }}."
@@ -47,11 +50,11 @@ runs:
                 --image-manifest "$IMAGE_MANIFEST" > /dev/null
               echo "tagged=true" >> $GITHUB_OUTPUT
               echo "::notice::Successfully applied environment tag: '${{ inputs.environment_tag }}'"
-              echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | ${{ inputs.environment_tag }} | |" >> $GITHUB_STEP_SUMMARY
+              echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | ${{ inputs.environment_tag }} |" >> $GITHUB_STEP_SUMMARY
             fi
           else
             echo "No environment_tag provided"
             echo "tagged=false" >> $GITHUB_OUTPUT
-            echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | N/A | No environment_tag provided |" >> $GITHUB_STEP_SUMMARY
+            echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | No environment_tag provided |" >> $GITHUB_STEP_SUMMARY
           fi
 
