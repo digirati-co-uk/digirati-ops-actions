@@ -36,8 +36,9 @@ runs:
         echo "| Repository | Version | Found | Tags |" >> $GITHUB_STEP_SUMMARY
         echo "| :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
         if [ "$IMAGE_METADATA" != "NOT_FOUND" ] && echo "$IMAGE_METADATA" | jq -e '.imageDetails[0].imageDigest' >/dev/null 2>&1; then
+          IMAGE_TAGS=$(echo "$IMAGE_METADATA" | jq -r '.imageDetails[0].imageTags[]?' | paste -sd "," -)
           echo "::notice::Image found in ECR with tag ${{inputs.app_version}}."
-           echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True |  |" >> $GITHUB_STEP_SUMMARY
+           echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True | $IMAGE_TAGS |" >> $GITHUB_STEP_SUMMARY
           echo "exists=true" >> $GITHUB_OUTPUT
         else
           echo "::notice::Image not found in ECR: ${{inputs.app_version}}."
