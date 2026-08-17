@@ -13,7 +13,7 @@ inputs:
     required: true
   environment_tag:
     description: 'Environment tag to use for the built image, e.g. "dev", "prod"'
-    required: true
+    required: false
     default: ""
 
 runs:

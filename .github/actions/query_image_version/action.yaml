@@ -33,13 +33,14 @@ runs:
 
         echo "IMAGE_METADATA = $IMAGE_METADATA"
         echo "## ${{ inputs.step_name }}" >> $GITHUB_STEP_SUMMARY
-        echo "| Repository | Version | Found | Tagged | Notes |" >> $GITHUB_STEP_SUMMARY
-        echo "| :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| Repository | Version | Found | Tags |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
         if [ "$IMAGE_METADATA" != "NOT_FOUND" ] && echo "$IMAGE_METADATA" | jq -e '.imageDetails[0].imageDigest' >/dev/null 2>&1; then
           echo "::notice::Image found in ECR with tag ${{inputs.app_version}}."
+           echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | True |${{ IMAGE_METADATA.imageDetails[0].imageTags | join(", ") }} |" >> $GITHUB_STEP_SUMMARY
           echo "exists=true" >> $GITHUB_OUTPUT
         else
           echo "::notice::Image not found in ECR: ${{inputs.app_version}}."
-          echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | False | | |" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{inputs.repository_name}} | ${{ inputs.app_version}} | False | |" >> $GITHUB_STEP_SUMMARY
           echo "exists=false" >> $GITHUB_OUTPUT
         fi

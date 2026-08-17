@@ -74,7 +74,7 @@ Builds the image using the specified dockerfile and then uploads the image to th
 - `repository_name`: The name of the ECR repository to deploy to.
 - `docker_context`: Path in the repository to the Dockerfile to build.
 - `app_version`: The App Version which this deployment will return on the /version endpoint
-- `environment_tag`: The environment tag for this deployment e.g. 'Dev', 'Test', 'Prod'
+- `environment_tag`: The environment tag for this deployment e.g. 'Dev', 'Test', 'Prod' (Optional)
 
 #### Example Usage
 
