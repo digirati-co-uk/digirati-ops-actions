@@ -2,6 +2,10 @@ name: Tag an Image in the ECR Repository
 description: "TODO"
 
 inputs:
+  step_name:
+    description: 'The name of the step executing this action, used for the summary'
+    required: false
+    default: 'Image Tagging'
   repository_name:
     description: 'ECR repository name'
     required: true
@@ -25,7 +29,7 @@ runs:
           --repository-name "${{ inputs.repository_name }}" \
           --image-ids imageTag="${{ inputs.app_version }}" \
           --output json 2>/dev/null || echo "NOT_FOUND")
-          
+
         echo "## ${{ inputs.step_name }}" >> $GITHUB_STEP_SUMMARY
         echo "| Repository | Version | Found | Tag |" >> $GITHUB_STEP_SUMMARY
         echo "| :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
