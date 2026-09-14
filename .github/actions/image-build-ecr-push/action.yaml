@@ -42,7 +42,7 @@ runs:
           type=semver,pattern={{major}}
 
     - name: Build and push
-      id: docker_build
+      id: docker-build
       uses: docker/build-push-action@v6
       with:
         context: ${{inputs.docker_context}}
