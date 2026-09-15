@@ -1,0 +1,69 @@
+name: Run ecs task.
+description: "TODO"
+
+inputs:
+  step_name:
+    description: 'The name of the step executing this action, used for the summary'
+    required: false
+    default: 'Management Task'
+  ecs_cluster:
+    description: 'The name of the target ECS Cluster'
+    required: true
+  management_task_definition:
+    description: 'Management task definition'
+    required: true
+  management_service:
+    description: 'Management service'
+    required: true
+  image_version:
+    description: 'sha- form of image tag.'
+    required: true
+  command:
+    description: 'Command array to run in management task, formatted as a JSON array string'
+    required: true
+    default: '["manage.py"]'
+  log_prefix:
+    description: 'Log prefix to query management task logs.'
+    required: true
+  force_recreate:
+    description: Recreate the management task definition for the deployed version if exists.
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Query for existing management task definition
+      shell: bash
+      if: ${{ inputs.force_recreate == 'false' }}
+      id: query-management-task-def
+      run: |
+        echo "Querying for Task Definition: ${{inputs.management_task_definition}} tagged with ${{inputs.image_version}}"
+        TAGGED_TASK_DEFS=$(aws resourcegroupstaggingapi get-resources \
+          --resource-type-filters "ecs:task-definition" \
+          --tag-filters "Key=ImageVersion,Values=${{inputs.image_version}}" \
+          --output json)
+        EXISTING_ARN=$(echo "$TAGGED_TASK_DEFS" | jq -r \
+          --arg family "/${{inputs.management_task_definition}}:" \
+          '.ResourceTagMappingList[].ResourceARN | select(contains($family))' | \
+          sort -V | tail -n 1)
+        if [ -n "$EXISTING_ARN" ] && [ "$EXISTING_ARN" != "null" ]; then
+          echo "::notice::Task Definition found: $EXISTING_ARN"
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "arn=$EXISTING_ARN" >> $GITHUB_OUTPUT
+        else
+          echo "::notice::No existing Task Definition."
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "<details>" >> $GITHUB_STEP_SUMMARY
+        echo "<summary>Container Logs</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`text" >> $GITHUB_STEP_SUMMARY
+        printf "%s\n" "$RAW_TASK_LOGS" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
