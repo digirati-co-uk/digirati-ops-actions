@@ -57,14 +57,62 @@ runs:
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
 
-        echo "" >> $GITHUB_STEP_SUMMARY
+    - name: Create template management task definition
+      shell: bash
+      if: |
+        steps.query-management-task-def.outputs.exists == 'false' ||
+        steps.query-management-task-def.outputs.exists == '' ||
+        inputs.force_recreate == 'true'
+      id: get-template-management-task-def
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition ${{ inputs.management_task_definition }} \
+          --query taskDefinition > management-task-def.json
 
-        echo "<details>" >> $GITHUB_STEP_SUMMARY
-        echo "<summary>Container Logs</summary>" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`text" >> $GITHUB_STEP_SUMMARY
-        printf "%s\n" "$RAW_TASK_LOGS" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "</details>" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        cat management-task-def.json | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' > template-management-task-def.json
+        echo "template=template-management-task-def.json" >> $GITHUB_OUTPUT
+
+    - name: Login to Amazon ECR
+      if: |
+        steps.query-management-task-def.outputs.exists == 'false' ||
+        steps.query-management-task-def.outputs.exists == '' ||
+        inputs.force_recreate == 'true'
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Render Deployed Management Task Definition
+      if: |
+        steps.query-management-task-def.outputs.exists == 'false' ||
+        steps.query-management-task-def.outputs.exists == '' ||
+        inputs.force_recreate == 'true'
+      id: render-management-task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{steps.get-template-management-task-def.outputs.template}}
+        container-name: ${{ inputs.management_service}}
+        image: ${{ steps.login-ecr.outputs.registry }}/ch-monet/letters-backend:${{
+          inputs.image_version }}
+
+    - name: Register new task definition revision.
+      shell: bash
+      if: |
+        steps.query-management-task-def.outputs.exists == 'false' ||
+        steps.query-management-task-def.outputs.exists == '' ||
+        inputs.force_recreate == 'true'
+      id: register-management-task-def
+      run: |
+        NEW_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file://${{steps.render-management-task-def.outputs.task-definition}} \
+          --tags key=ImageVersion,value="${{inputs.image_version}}" \
+          --query "taskDefinition.taskDefinitionArn" \
+          --output text)
+        echo "::notice:: Registered new task definition: $NEW_ARN" 
+        echo "arn=$NEW_ARN" >> $GITHUB_OUTPUT
+
+    - name: Run Task Summary
+      shell: bash
+      run: |
+        echo "## ${{ inputs.step_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "| Cluster | Task Definition | Service | Image Version | Command | Log Prefix |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| ${{inputs.ecs_cluster}} | ${{inputs.management_task_definition}} | ${{inputs.management_service}} | ${{inputs.image_version}} | \`${{inputs.command}}\` | ${{inputs.log_prefix}} |" >> $GITHUB_STEP_SUMMARY
