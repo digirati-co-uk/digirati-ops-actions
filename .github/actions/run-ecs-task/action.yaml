@@ -43,6 +43,7 @@ runs:
           --resource-type-filters "ecs:task-definition" \
           --tag-filters "Key=ImageVersion,Values=${{inputs.image_version}}" \
           --output json)
+          echo "TAGGED_TASK_DEFS = $TAGGED_TASK_DEFS"
         EXISTING_ARN=$(echo "$TAGGED_TASK_DEFS" | jq -r \
           --arg family "/${{inputs.management_task_definition}}:" \
           '.ResourceTagMappingList[].ResourceARN | select(contains($family))' | \
@@ -55,7 +56,7 @@ runs:
           echo "::notice::No existing Task Definition."
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
 
         echo "<details>" >> $GITHUB_STEP_SUMMARY
