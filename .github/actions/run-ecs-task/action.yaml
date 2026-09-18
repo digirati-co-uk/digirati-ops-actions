@@ -125,7 +125,7 @@ runs:
             "containerOverrides": [
               {
                 "name": "${{inputs.management_service}}",
-                "command": ${{inputs.command}}
+                "command": "${{inputs.command}}"
               }
             ]
           }' \
