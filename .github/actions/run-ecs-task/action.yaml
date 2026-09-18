@@ -109,6 +109,56 @@ runs:
         echo "::notice:: Registered new task definition: $NEW_ARN" 
         echo "arn=$NEW_ARN" >> $GITHUB_OUTPUT
 
+    - name: Run task and wait
+      shell: bash
+      run: |
+        TARGET_ARN="${{ steps.query-management-task-def.outputs.arn || steps.register-management-task-def.outputs.arn }}"
+        echo "Executing task with definition: $TARGET_ARN"
+
+        echo "Using network config: ${{steps.backend-network-config.outputs.json}}"
+
+        TASK_ARN=$(aws ecs run-task \
+          --cluster ${{inputs.ecs_cluster}} \
+          --task-definition "$TARGET_ARN" \
+          --launch-type FARGATE \
+          --network-configuration '${{steps.backend-network-config.outputs.json}}' \
+          --overrides '{
+            "containerOverrides": [
+              {
+                "name": "${{inputs.management_service}}",
+                "command": ${{inputs.command}}
+              }
+            ]
+          }' \
+          --query "tasks[0].taskArn" \
+          --output text)
+        echo "Task started: $TASK_ARN"
+        aws ecs wait tasks-stopped --cluster "${{inputs.ecs_cluster}}" --tasks "$TASK_ARN"
+        CONTAINER_STATUS=$(aws ecs describe-tasks \
+          --cluster "${{ inputs.ecs_cluster }}" \
+          --tasks "$TASK_ARN" \
+          --query "tasks[0].containers[0].{exitCode: exitCode, reason: reason}" \
+          --output json)
+        EXIT_CODE=$(echo "$CONTAINER_STATUS" | jq -r '.exitCode')
+        FAIL_REASON=$(echo "$CONTAINER_STATUS" | jq -r '.reason')
+
+        TASK_ID=$(echo "$TASK_ARN" | awk -F/ '{print $NF}')
+        RAW_TASK_LOGS=$(aws logs tail ${{inputs.ecs_cluster}} \
+          --log-stream-name-prefix "${{inputs.log_prefix}}/${{inputs.management_service}}/"$TASK_ID \
+          --format short)
+        echo "==================== MANAGEMENT TASK CONTAINER LOGS ===================="
+        printf "%s\n" "$RAW_TASK_LOGS"
+        echo "==============================================================="
+
+        if [ "$EXIT_CODE" != "0" ] && [ "$EXIT_CODE" != "null" ]; then
+          echo "::error::Management task failed with exit code $EXIT_CODE. Reason: $FAIL_REASON"
+          exit $EXIT_CODE
+        elif [ "$EXIT_CODE" = "null" ]; then
+          echo "::error::Management task failed to run or was killed. Reason: $FAIL_REASON"
+          exit 1 # Forces a standard failure exit code
+        fi
+        echo "::notice::Management task completed cleanly with exit code 0."
+
     - name: Run Task Summary
       shell: bash
       run: |
