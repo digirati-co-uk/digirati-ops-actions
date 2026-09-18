@@ -125,12 +125,13 @@ runs:
             "containerOverrides": [
               {
                 "name": "${{inputs.management_service}}",
-                "command": "${{inputs.command}}"
+                "command": ${{inputs.command}}
               }
             ]
           }' \
           --query "tasks[0].taskArn" \
           --output text)
+        
         echo "Task started: $TASK_ARN"
         aws ecs wait tasks-stopped --cluster "${{inputs.ecs_cluster}}" --tasks "$TASK_ARN"
         CONTAINER_STATUS=$(aws ecs describe-tasks \
