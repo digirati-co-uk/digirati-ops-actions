@@ -115,13 +115,12 @@ runs:
         TARGET_ARN="${{ steps.query-management-task-def.outputs.arn || steps.register-management-task-def.outputs.arn }}"
         echo "Executing task with definition: $TARGET_ARN"
 
-        echo "Using network config: ${{steps.backend-network-config.outputs.json}}"
+        
 
         TASK_ARN=$(aws ecs run-task \
           --cluster ${{inputs.ecs_cluster}} \
           --task-definition "$TARGET_ARN" \
           --launch-type FARGATE \
-          --network-configuration '${{steps.backend-network-config.outputs.json}}' \
           --overrides '{
             "containerOverrides": [
               {
