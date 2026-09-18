@@ -109,6 +109,18 @@ runs:
         echo "::notice:: Registered new task definition: $NEW_ARN" 
         echo "arn=$NEW_ARN" >> $GITHUB_OUTPUT
 
+    - name: Get backend network configuration
+      shell: bash
+      id: backend-network-config
+      run: |
+        echo "Fetching Backend network config from: ${{inputs.ecs_cluster}}/${{inputs.network_source_service}}"
+        NETWORK_CONFIG=$(aws ecs describe-services \
+          --cluster ${{inputs.ecs_cluster}} \
+          --services ${{inputs.network_source_service}} \
+          --query "services[0].networkConfiguration" \
+          --output json | jq -c .)
+        echo "json=$NETWORK_CONFIG" >> $GITHUB_OUTPUT
+
     - name: Run task and wait
       shell: bash
       run: |
@@ -121,6 +133,7 @@ runs:
           --cluster ${{inputs.ecs_cluster}} \
           --task-definition "$TARGET_ARN" \
           --launch-type FARGATE \
+          --network-configuration '${{steps.backend-network-config.outputs.json}}' \
           --overrides '{
             "containerOverrides": [
               {
